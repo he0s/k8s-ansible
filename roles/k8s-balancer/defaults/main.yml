@@ -1,0 +1,23 @@
+---
+NGINX_STREAM_DIR: /etc/nginx/stream.d
+
+K8S_NODES:
+  - {
+      ip: 127.0.0.1,
+      port: "{{ SERVER_PORT }}",
+      fails: 3,
+      fails_timeout: 60
+    }
+
+NGINX_STREAM_SERVERS:
+  - { "path": "{{ NGINX_STREAM_DIR }}/k8s-balancer.conf", upstream_name: "{{ UPSTREAM_NAME }}", upstream_servers: "{{ K8S_NODES }}", access_log: /var/log/nginx/www.kubernetes.log, level: basic, error_log: /var/log/nginx/wwww.kubernetes_error.log}
+
+SERVER_PORT: 6443
+
+STREAM_ACCESS_LOG:
+  - path: /var/log/nginx/www.kubernetes.log,
+    level: basic
+
+STREAM_ERROR_LOG: /var/log/nginx/wwww.kubernetes_error.log
+
+UPSTREAM_NAME: k8s

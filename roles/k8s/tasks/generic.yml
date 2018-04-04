@@ -1,0 +1,191 @@
+---
+- name: install yum dependency
+  when: ansible_os_family == "RedHat"
+  yum: name={{ item }} state=latest
+  with_items:
+    - yum-utils
+    - device-mapper-persistent-data
+    - lvm2
+  tags:
+    - yum
+
+- name: install dependency for Kubernetes packages
+  when: ansible_os_family == "Debian"
+  apt:
+    name: "{{ item }}"
+    state: present
+    update_cache: yes
+  with_items:
+    - apt-transport-https
+    - ca-certificates
+    - software-properties-common
+    - python3-openssl
+  tags:
+    - apt
+
+- name: add Docker's repository key
+  when: ansible_os_family == "Debian"
+  apt_key:
+    url: https://download.docker.com/linux/ubuntu/gpg
+    state: present
+  tags:
+    - apt
+    - docker
+
+- name: add docker repository
+  when: ansible_os_family == "Debian"
+  apt_repository:
+    repo: "deb https://download.docker.com/linux/{{ ansible_distribution|lower }} {{ ansible_distribution_release }} stable"
+    state: present
+  tags:
+    - apt
+    - docker
+
+- name: add docker repository
+  when: ansible_os_family == "RedHat"
+  command: /usr/bin/yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
+  tags:
+    - yum
+    - docker
+
+# AWS RHEL workaround
+- name: install epel repository
+  when: ansible_os_family == "RedHat" and INSTALL_AWS == "true"
+  yum:
+    name: https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
+    state: present
+  tags:
+    - yum
+    - epel
+
+# AWS RHEL workaround
+- name: install container-selinux
+  when: ansible_os_family == "RedHat" and INSTALL_AWS == "true"
+  yum:
+    name: http://mirror.centos.org/centos/7/extras/x86_64/Packages/container-selinux-2.36-1.gitff95335.el7.noarch.rpm
+    state: present
+  tags:
+    - yum
+    - docker
+
+- name: install container-selinux
+  when: ansible_os_family == "RedHat" and INSTALL_AWS == "false"
+  yum:
+    name: container-selinux
+    state: present
+  tags:
+    - yum
+    - docker
+
+- name: install docker ce
+  when: ansible_os_family == "RedHat"
+  yum:
+    name: docker-ce
+    state: latest
+  tags:
+    - yum
+    - docker
+
+- name: install docker ce
+  when: ansible_os_family == "Debian"
+  apt:
+    name: docker-ce
+    state: latest
+  tags:
+    - apt
+    - docker
+
+- name: start docker
+  systemd:
+    name: docker.service
+    enabled: true
+    state: started
+    daemon_reload: true
+  tags:
+    - docker
+
+- name: add kubernetes repository
+  when: ansible_os_family == "RedHat"
+  yum_repository:
+    name: kubernetes
+    description: Kubernetes main repository
+    file: kubernetes.repo
+    baseurl: https://packages.cloud.google.com/yum/repos/kubernetes-el7-x86_64
+    enabled: true
+    gpgcheck: true
+    repo_gpgcheck: true
+    gpgkey: https://packages.cloud.google.com/yum/doc/yum-key.gpg https://packages.cloud.google.com/yum/doc/rpm-package-key.gpg
+  tags:
+    - yum
+    - k8s
+
+- name: add kubernetes repository key
+  when: ansible_os_family == "Debian"
+  apt_key:
+    url: https://packages.cloud.google.com/apt/doc/apt-key.gpg
+    state: present
+  tags:
+    - apt
+    - k8s
+
+- name: add kubernetes repository
+  when: ansible_os_family == "Debian"
+  apt_repository:
+    repo: "deb http://apt.kubernetes.io/ kubernetes-xenial main"
+    state: present
+    update_cache: yes
+    filename: kubernetes.list
+  tags:
+    - apt
+    - k8s
+
+- name: install basic kubernetes packages
+  when: ansible_os_family == "RedHat"
+  yum: name={{ item }} state=latest
+  with_items:
+    - kubelet
+    - kubeadm
+    - kubectl
+  tags:
+    - yum
+    - k8s
+
+- name: install basic kubernetes packages
+  when: ansible_os_family == "Debian"
+  apt: name={{ item }} state=latest
+  with_items:
+    - kubelet
+    - kubeadm
+    - kubectl
+  tags:
+    - apt
+    - k8s
+
+- name: copy clean kubelet config
+  copy:
+    src: kubelet_clean.conf
+    dest: /etc/systemd/system/kubelet.service.d/10-kubeadm.conf
+  tags:
+    - kubelet
+
+- name: start kubelet
+  systemd:
+    name: kubelet.service
+    enabled: true
+    state: started
+    daemon_reload: yes
+  tags:
+    - kubelet
+
+- name: copy sysctl iptables settings
+  copy:
+    src: files/k8s.conf
+    dest: /etc/sysctl.d/k8s.conf
+  tags:
+    - system
+
+- name: enable sysctl iptables settings
+  when: ansible_os_family == "RedHat"
+  command: sysctl --system
+  tags:
+    - system

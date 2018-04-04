@@ -1,0 +1,69 @@
+---
+- include_vars: "{{item}}"
+  with_first_found:
+  - "../vars/{{ansible_distribution}}-{{ansible_distribution_version}}.yml"
+  - "../vars/{{ansible_distribution}}-{{ansible_distribution_major_version}}.yml"
+  - "../vars/{{ansible_distribution}}.yml"
+  - "../vars/{{ansible_os_family}}.yml"
+  - "../vars/default.yml"
+
+- name: update and upgrade the system
+  when: ansible_os_family == "Debian"
+  apt:
+    update_cache: yes
+    upgrade: dist
+    state: latest
+  tags:
+    - apt
+
+- name: update and upgrade the system
+  when: ansible_os_family == "RedHat"
+  yum:
+    name: '*'
+    state: latest
+  tags:
+    - yum
+    - skip_ansible_lint
+
+- name: install basic packages
+  when: ansible_os_family == "Debian"
+  apt: name={{ item }} state=installed
+  with_items: "{{ DEFAULT_PACKAGES }}"
+  tags:
+    - apt
+
+- name: install basic packages
+  when: ansible_os_family == "RedHat"
+  yum:
+    name: "{{ item }}"
+    state: latest
+  with_items: "{{ DEFAULT_PACKAGES }}"
+  tags:
+    - yum
+    - skip_ansible_lint
+
+- name: Permissive Selinux
+  shell: setenforce 0
+  when: ansible_os_family == "RedHat"
+  ignore_errors: True
+
+- name: Disable Selinux
+  copy:
+    src: selinux_config
+    dest: /etc/selinux/config
+    owner: root
+    group: root
+    mode: 0644
+  when: ansible_os_family == "RedHat"
+
+- name: Check NTP service
+  service:
+    name: ntp
+    state: started
+  when: ansible_os_family == "Debian"
+
+- name: Check NTP service
+  service:
+    name: ntpd
+    state: started
+  when: ansible_os_family == "RedHat"

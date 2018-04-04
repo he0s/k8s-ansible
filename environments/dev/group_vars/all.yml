@@ -1,0 +1,10 @@
+---
+ETCD_ADDRESS:
+  - {"proto": http, "ip": 192.168.1.210, "cluster_port": '2380', port: '2379', "name": kubemaster01}
+  - {"proto": http, "ip": 192.168.1.160, "cluster_port": '2380', port: '2379', "name": kubemaster02}
+
+INSTALL_AWS: false
+
+KUBERNETES_DEF_NETWORK: flannel
+LOAD_BALANCER: 192.168.1.56
+SERVER_PORT: 6443

@@ -1,0 +1,37 @@
+---
+kubemaster01 ansible_host=192.168.1.210 ansible_user=root
+kubemaster02 ansible_host=192.168.1.160 ansible_user=root
+balancer01 ansible_host=192.168.1.56 ansible_user=root
+
+kubenode01 ansible_host=192.168.1.169 ansible_user=root
+kubenode02 ansible_host=192.168.1.55 ansible_user=root
+
+[k8s-nodes]
+kubenode01
+kubenode02
+
+[k8s-nodes:vars]
+# This "master_node" variable should be always here, to separate playbooks
+# between masters and workers.
+# The "inital_setup" variable should has "false" variable for the k8s-nodes group
+# to avoid running a set of master-related tasks.
+master_node=false
+initial_setup=false
+
+[etcd-nodes]
+kubemaster01
+kubemaster02
+
+[k8s-balancer]
+balancer01
+
+[k8s-masters]
+# For first installation a master node should have GEN_CERTS variable with "true"
+# value. It will says to ansible, that SSL-certificates should be generated.
+kubemaster01 GEN_CERTS=true
+kubemaster02
+
+[k8s-masters:vars]
+# This "master_node" variable should be always here, to separate playbooks
+# between masters and workers.
+master_node=true

@@ -1,0 +1,89 @@
+---
+
+- name: add nginx's repository key
+  when:
+    - ansible_os_family == "Debian"
+  apt_key:
+    keyserver: keyserver.ubuntu.com
+    id: ABF5BD827BD9BF62
+  tags:
+    - apt
+
+- name: add main nginx repository
+  when: ansible_os_family == "Debian"
+  apt_repository:
+    repo: "deb http://nginx.org/packages/{{ ansible_distribution|lower }}/ {{ ansible_distribution_release }} nginx"
+    state: present
+
+- name: add source nginx repository
+  when: ansible_os_family == "Debian"
+  apt_repository:
+    repo: "deb-src http://nginx.org/packages/{{ ansible_distribution|lower }}/ {{ ansible_distribution_release }} nginx"
+    state: present
+
+- name: install nginx
+  apt:
+    name: nginx
+    state: latest
+  when:
+    - ansible_os_family == "Debian"
+  tags: system
+
+- name: install epel-release
+  when: ansible_os_family == "RedHat"
+  yum:
+    name: epel-release
+    state: present
+  tags:
+    - yum
+
+- name: install nginx
+  yum:
+    name: nginx
+    state: present
+  when:
+    - ansible_os_family == "RedHat"
+  tags: system
+
+- name: create stream config dirs
+  file:
+    path: "{{ NGINX_STREAM_DIR }}"
+    state: directory
+    owner: root
+    group: root
+  tags: system
+
+- name: create stream config files
+  template:
+   src: k8s-balancer.conf.j2
+   dest: "{{ item.path }}"
+  when:
+    - NGINX_STREAM_SERVERS
+  with_items:
+    - "{{ NGINX_STREAM_SERVERS }}"
+
+- name: add including of stream.d directory to nginx main config
+  lineinfile:
+    path: /etc/nginx/nginx.conf
+    backup: yes
+    insertafter: EOF
+    line: "include /etc/nginx/stream.d/*.conf;"
+
+- name: open ports for nginx
+  firewalld:
+    port: "{{ item }}/tcp"
+    permanent: true
+    state: enabled
+    immediate: true
+    zone: public
+  with_items:
+    - "{{ SERVER_PORT }}"
+  tags:
+    - firewall
+
+- name: start nginx
+  service:
+    name: nginx
+    state: restarted
+    enabled: true
+  tags: system

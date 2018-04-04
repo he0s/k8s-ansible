@@ -1,0 +1,14 @@
+---
+DEFAULT_PACKAGES:
+  - firewalld
+  - git
+  - java-1.8.0-openjdk
+  - net-tools
+  - ntp
+  - mc
+  - rsync
+  - telnet
+  - tmux
+  - vim
+  - wget
+  - yum-utils

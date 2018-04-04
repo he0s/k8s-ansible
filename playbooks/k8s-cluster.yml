@@ -1,0 +1,45 @@
+---
+
+- name: apply common configuration to etcd and k8s nodes
+  hosts:
+    - etcd-nodes
+    - k8s-nodes
+    - k8s-masters
+    - k8s-balancer
+  become: true
+  remote_user: root
+  roles:
+    - common
+
+- name: apply etcd configuration to etcd cluster
+  hosts:
+    - etcd-nodes
+  become: true
+  remote_user: root
+  roles:
+    - etcd
+
+- name: apply configuration to k8s balancer nodes
+  hosts:
+    - k8s-balancer
+  become: true
+  remote_user: root
+  roles:
+    - k8s-balancer
+
+- name: apply k8s configuration to k8s masters
+  hosts:
+    - k8s-masters
+  become: true
+  remote_user: root
+  serial: 1
+  roles:
+    - k8s
+
+- name: apply k8s configuration to all k8s nodes
+  hosts:
+    - k8s-nodes
+  become: true
+  remote_user: root
+  roles:
+    - k8s

@@ -1,0 +1,10 @@
+[Member]
+ETCD_DATA_DIR="{{ ETCD_DATA_DIR }}"
+ETCD_LISTEN_PEER_URLS="http://{{ ansible_default_ipv4.address }}:2380"
+ETCD_LISTEN_CLIENT_URLS="http://{{ ansible_default_ipv4.address }}:2379,http://127.0.0.1:2379"
+ETCD_NAME="{{ inventory_hostname }}"
+ETCD_INITIAL_ADVERTISE_PEER_URLS="http://{{ ansible_default_ipv4.address }}:2380"
+ETCD_ADVERTISE_CLIENT_URLS="http://{{ ansible_default_ipv4.address }}:2379"
+ETCD_INITIAL_CLUSTER="{{ server_list }}"
+ETCD_INITIAL_CLUSTER_TOKEN="{{ ETCD_INITIAL_CLUSTER_TOKEN }}"
+ETCD_INITIAL_CLUSTER_STATE="{{ ETCD_INITIAL_CLUSTER_STATE }}"

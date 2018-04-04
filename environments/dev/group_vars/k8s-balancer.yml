@@ -1,0 +1,14 @@
+---
+K8S_NODES:
+  - {
+      ip: 192.168.1.210,
+      port: "{{ SERVER_PORT }}",
+      fails: 3,
+      fails_timeout: 60
+    }
+  - {
+      ip: 192.168.1.160,
+      port: "{{ SERVER_PORT }}",
+      fails: 3,
+      fails_timeout: 60
+    }

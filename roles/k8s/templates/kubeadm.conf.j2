@@ -1,0 +1,13 @@
+apiVersion: kubeadm.k8s.io/v1alpha1
+kind: MasterConfiguration
+etcd:
+  endpoints:
+{% for item in ETCD_ADDRESS %}
+  - "{{ item.proto }}://{{ item.ip }}:{{ item.port }}"
+{% endfor %}
+token: "{{ KUBEADM_TOKEN.stdout }}"
+tokenTTL: "0"
+{% if KUBERNETES_DEF_NETWORK %}
+networking:
+  podSubnet: {{ KUBERNETES_NETWORKS[KUBERNETES_DEF_NETWORK]['subnet'] }}
+{%endif%}

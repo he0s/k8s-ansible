@@ -1,0 +1,31 @@
+---
+
+ETCD_ADDRESS:
+  - {"proto": http, "ip": 127.0.0.1, "cluster_port": '2380', port: '2379', "name": etcd01}
+
+ETCD_DIRS:
+  - {
+      path: /etc/etcd/,
+      owner: root,
+      group: root,
+      mode: 755
+    }
+  - {
+      path: /var/lib/etcd/,
+      owner: etcd,
+      group: etcd,
+      mode: 755
+    }
+
+ETCD_DATA_DIR: /var/lib/etcd/default.etcd
+ETCD_INITIAL_CLUSTER_STATE: new
+ETCD_INITIAL_CLUSTER_TOKEN: etcd-cluster
+
+ETCD_USERS:
+  - {
+      name: etcd,
+      group: etcd,
+      home_dir: /var/lib/etcd
+    }
+
+ETCD_VER: v3.2.7

@@ -1,0 +1,4 @@
+---
+# vars file for kubernetes
+kubernetes_ca_depot: /tmp/pki
+openssl: /usr/bin/openssl

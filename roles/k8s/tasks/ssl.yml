@@ -1,0 +1,161 @@
+---
+
+- name: make sure kubernetes-ca depot exists
+  file:
+    path: "{{kubernetes_ca_depot}}"
+    mode: 0755
+    state: directory
+
+- name: create cluster root ca key
+  shell: >
+    {{openssl}} genrsa -out {{kubernetes_ca_depot}}/ca.key 4096
+    creates={{kubernetes_ca_depot}}/ca.key
+
+- name: create cluster root ca
+  shell: >
+    {{openssl}} req -x509 -new -nodes -days 36500
+    -key {{kubernetes_ca_depot}}/ca.key
+    -out {{kubernetes_ca_depot}}/ca.crt
+    -subj "/CN=kubernetes"
+    creates={{kubernetes_ca_depot}}/ca.crt
+
+- name: create openssl.cnf
+  template:
+    src: openssl.cnf.j2
+    dest: "{{kubernetes_ca_depot}}/openssl.cnf"
+
+- name: slurp openssl.cnf content
+  slurp:
+    src: "{{kubernetes_ca_depot}}/openssl.cnf"
+  register: openssl_cnf
+  run_once: true
+
+- name: record openssl.cnf hash
+  set_fact:
+    openssl_cnf_sha1: "{{ openssl_cnf.content | hash('sha1') }}"
+
+- name: generate apiserver key
+  shell: >
+    {{openssl}} genrsa -out {{kubernetes_ca_depot}}/apiserver.key 4096
+    creates={{kubernetes_ca_depot}}/apiserver.key
+
+- name: generate apiserver csr
+  shell: >
+    {{openssl}} req -new -key {{kubernetes_ca_depot}}/apiserver.key
+    -out {{kubernetes_ca_depot}}/apiserver-{{openssl_cnf_sha1}}.csr -subj "/CN=kube-apiserver"
+    -config {{kubernetes_ca_depot}}/openssl.cnf
+    creates={{kubernetes_ca_depot}}/apiserver-{{openssl_cnf_sha1}}.csr
+
+- name: generate apiserver crt
+  shell: >
+    {{openssl}} x509 -req -in {{kubernetes_ca_depot}}/apiserver-{{openssl_cnf_sha1}}.csr
+    -CA {{kubernetes_ca_depot}}/ca.crt -CAkey {{kubernetes_ca_depot}}/ca.key
+    -CAcreateserial -out {{kubernetes_ca_depot}}/apiserver.crt -days 36500
+    -extensions v3_req -extfile {{kubernetes_ca_depot}}/openssl.cnf
+    creates={{kubernetes_ca_depot}}/apiserver.crt
+
+- name: generate apiserver-kubelet-client key
+  shell: >
+    {{openssl}} genrsa -out {{kubernetes_ca_depot}}/apiserver-kubelet-client.key 4096
+    creates={{kubernetes_ca_depot}}/apiserver-kubelet-client.key
+
+- name: generate apiserver-kubelet-client csr
+  shell: >
+    {{openssl}} req -new -key {{kubernetes_ca_depot}}/apiserver-kubelet-client.key
+    -out {{kubernetes_ca_depot}}/apiserver-kubelet-client.csr -subj "/CN=kube-apiserver-kubelet-client/O=system:masters"
+    creates={{kubernetes_ca_depot}}/apiserver-kubelet-client.csr
+
+- name: generate apiserver-kubelet-client crt
+  shell: >
+    {{openssl}} x509 -req -in {{kubernetes_ca_depot}}/apiserver-kubelet-client.csr
+    -CA {{kubernetes_ca_depot}}/ca.crt -CAkey {{kubernetes_ca_depot}}/ca.key
+    -CAcreateserial -out {{kubernetes_ca_depot}}/apiserver-kubelet-client.crt -days 36500
+    creates={{kubernetes_ca_depot}}/apiserver-kubelet-client.crt
+
+- name: generate service account private key
+  shell: >
+    {{openssl}} genpkey -algorithm RSA -out {{kubernetes_ca_depot}}/sa.key
+    -pkeyopt rsa_keygen_bits:4096
+
+- name: generate service account public key
+  shell: >
+    {{openssl}} rsa -pubout -in {{kubernetes_ca_depot}}/sa.key
+    -out {{kubernetes_ca_depot}}/sa.pub
+
+- name: generate front-proxy CA key
+  shell: >
+    {{openssl}} genrsa -out {{kubernetes_ca_depot}}/front-proxy-ca.key 4096
+    creates={{kubernetes_ca_depot}}/front-proxy-ca.key
+
+- name: create front-proxy CA cert
+  shell: >
+    {{openssl}} req -x509 -new -nodes -days 36500
+    -key {{kubernetes_ca_depot}}/front-proxy-ca.key
+    -out {{kubernetes_ca_depot}}/front-proxy-ca.crt
+    -subj "/CN=kubernetes"
+    creates={{kubernetes_ca_depot}}/front-proxy-ca.crt
+
+- name: generate front-proxy-client key
+  shell: >
+    {{openssl}} genrsa -out {{kubernetes_ca_depot}}/front-proxy-client.key 4096
+    creates={{kubernetes_ca_depot}}/front-proxy-client.key
+
+- name: generate front-proxy-client csr
+  shell: >
+    {{openssl}} req -new -key {{kubernetes_ca_depot}}/front-proxy-client.key
+    -out {{kubernetes_ca_depot}}/front-proxy-client.csr -subj "/CN=front-proxy-client"
+    creates={{kubernetes_ca_depot}}/front-proxy-client.csr
+
+- name: generate front-proxy-client crt
+  shell: >
+    {{openssl}} x509 -req -in {{kubernetes_ca_depot}}/front-proxy-client.csr
+    -CA {{kubernetes_ca_depot}}/front-proxy-ca.crt -CAkey {{kubernetes_ca_depot}}/front-proxy-ca.key
+    -CAcreateserial -out {{kubernetes_ca_depot}}/front-proxy-client.crt -days 36500
+    creates={{kubernetes_ca_depot}}/front-proxy-client.crt
+
+- name: create k8s pki directory
+  file:
+    path: "{{KUBERNETES_CONFIGS}}"
+    state: directory
+    recurse: yes
+    owner: root
+    group: root
+
+- name: generate admin key
+  shell: >
+    {{openssl}} genrsa -out {{kubernetes_ca_depot}}/admin.key 2048
+    creates={{kubernetes_ca_depot}}/admin-key.key
+
+- name: generate admin csr
+  shell: >
+    {{openssl}} req -new -key {{kubernetes_ca_depot}}/admin.key
+    -out {{kubernetes_ca_depot}}/admin.csr -subj "/CN=kube-admin"
+    creates={{kubernetes_ca_depot}}/admin.csr
+
+- name: generate admin crt
+  shell: >
+    {{openssl}} x509 -req -in {{kubernetes_ca_depot}}/admin.csr
+    -CA {{kubernetes_ca_depot}}/ca.crt -CAkey {{kubernetes_ca_depot}}/ca.key
+    -CAcreateserial -out {{kubernetes_ca_depot}}/admin.crt -days 36500
+    creates={{kubernetes_ca_depot}}/admin.crt
+
+- name: pull genereated certificates to localhost
+  synchronize:
+    src: "{{kubernetes_ca_depot}}/{{ item }}"
+    dest: /tmp/etcpkifiles/
+    mode: pull
+  with_items:
+    - admin.crt
+    - admin.key
+    - apiserver.crt
+    - apiserver.key
+    - apiserver-kubelet-client.crt
+    - apiserver-kubelet-client.key
+    - ca.crt
+    - ca.key
+    - front-proxy-ca.crt
+    - front-proxy-ca.key
+    - front-proxy-client.crt
+    - front-proxy-client.key
+    - sa.key
+    - sa.pub

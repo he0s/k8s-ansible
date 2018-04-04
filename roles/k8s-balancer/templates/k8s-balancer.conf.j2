@@ -1,0 +1,22 @@
+stream {
+    upstream {{ item.upstream_name }} {
+    {% for server in item.upstream_servers %}
+      server {{ server.ip }}:{{ server.port }} max_fails={{ server.fails }} fail_timeout={{ server.fails_timeout }}s;
+    {% endfor %}
+    }
+
+    log_format basic '$remote_addr [$time_local] '
+                 '$protocol $status $bytes_sent $bytes_received '
+                 '$session_time "$upstream_addr" '
+                 '"$upstream_bytes_sent" "$upstream_bytes_received" "$upstream_connect_time"';
+
+    access_log {{ item.access_log }} {{ item.level }};
+    error_log {{ item.error_log }};
+
+    server {
+      listen {{ SERVER_PORT }};
+      proxy_pass {{ item.upstream_name }};
+      proxy_next_upstream on;
+    }
+
+}

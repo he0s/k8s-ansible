@@ -1,0 +1,31 @@
+---
+# CALICO_LINK: https://docs.projectcalico.org/master/getting-started/kubernetes/installation/hosted/kubeadm/1.7/calico.yaml
+
+GEN_CERTS: false
+
+ETCD_ADDRESS:
+  - {"proto": http, "ip": 127.0.0.1, "port": '2379', "name": etcd-node01}
+
+INSTALL_AWS: false
+
+LOAD_BALANCER: 127.0.0.1
+
+KUBEADM_INIT_CONFIG: /tmp/kubeadm.conf
+KUBERNETES_CONFIGS: /etc/kubernetes
+KUBERNETES_FILES:
+  - {src: admin.conf.j2, dest: "{{ KUBERNETES_CONFIGS }}/admin.conf"}
+  - {src: controller-manager.conf.j2, dest: "{{ KUBERNETES_CONFIGS }}/controller-manager.conf"}
+  - {src: kubelet.conf.j2, dest: "{{ KUBERNETES_CONFIGS }}/kubelet.conf"}
+  - {src: scheduler.conf.j2, dest: "{{ KUBERNETES_CONFIGS }}/scheduler.conf"}
+
+KUBERNETES_NETWORKS:
+  calico:
+    url: https://docs.projectcalico.org/master/getting-started/kubernetes/installation/hosted/kubeadm/1.7/calico.yaml
+    subnet: 192.168.0.0/16
+  flannel:
+    url: https://raw.githubusercontent.com/coreos/flannel/v0.9.1/Documentation/kube-flannel.yml
+    subnet: 10.244.0.0/16
+
+KUBERNETES_DEF_NETWORK: calico
+
+KUBERNETES_TEMP_DIR: /tmp/k8s-certs

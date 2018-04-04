@@ -1,0 +1,9 @@
+---
+DEFAULT_PACKAGES:
+  - curl
+  - firewalld
+  - git
+  - htop
+  - ntp
+  - mc
+  - vim

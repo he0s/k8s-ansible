@@ -1,0 +1,66 @@
+---
+- name: open ports for kubeadm
+  firewalld:
+    port: "{{ item }}/tcp"
+    permanent: true
+    state: enabled
+    immediate: true
+  with_items:
+    - 6443
+    - 10250
+    - 10251
+    - 10252
+    - 10255
+  tags:
+    - system
+    - kubeadm
+
+- name: generate kubeadm token
+  command: /usr/bin/kubeadm token generate
+  register: KUBEADM_TOKEN
+  tags:
+    - kubeadm
+    - config
+
+- name: create kubeadm config
+  template:
+    src: kubeadm.conf.j2
+    dest: "{{ KUBEADM_INIT_CONFIG }}"
+  tags:
+    - kubeadm
+    - config
+
+- name: configure kubeadm
+  when: initial_setup|default(false)|bool
+  command: /usr/bin/kubeadm init --config {{ KUBEADM_INIT_CONFIG }}
+  register: kubeadm_output
+  tags:
+    - kubeadm
+
+- name: create .kube directory
+  file:
+    path: /root/.kube/
+    state: directory
+    owner: root
+    group: root
+  tags:
+    - kubeadm
+
+- name: copy k8s credentials
+  command: cp -u /etc/kubernetes/admin.conf /root/.kube/config
+  tags:
+    - kubeadm
+
+- name: install "{{ KUBERNETES_DEF_NETWORK }}" network plugin
+  when: initial_setup|default(false)|bool
+  command: "/usr/bin/kubectl apply -f {{ KUBERNETES_NETWORKS[KUBERNETES_DEF_NETWORK]['url'] }}"
+  tags:
+    - network
+
+- name: update .kube/config file
+  replace:
+    path: /root/.kube/config
+    regexp: '{{ ansible_default_ipv4.address }}'
+    replace: '{{ LOAD_BALANCER }}'
+  tags:
+    - replace
