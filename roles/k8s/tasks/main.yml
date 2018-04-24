@@ -3,13 +3,13 @@
 - import_tasks: ssl.yml
   when: GEN_CERTS|default(false)|bool
 
+- import_tasks: generic.yml
+
 - name: push certificates to kubernetes masters
   when: (master_node|default(false)|bool and initial_setup|default(false)|bool)
   synchronize:
     src: /tmp/etcpkifiles/
     dest: /etc/kubernetes/pki
-
-- import_tasks: generic.yml
 
 - import_tasks: kubeadm.yml
   when: master_node|default(false)|bool

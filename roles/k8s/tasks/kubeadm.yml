@@ -12,8 +12,23 @@
     - 10252
     - 10255
   tags:
-    - system
+    - firewall
     - kubeadm
+
+- name: open ports for calicot
+  when: KUBERNETES_DEF_NETWORK == "calico"
+  firewalld:
+    port: "{{ item }}/tcp"
+    permanent: true
+    state: enabled
+    immediate: true
+  with_items:
+    - 6666
+    - 6667
+  tags:
+    - calico
+    - firewall
+
 
 - name: generate kubeadm token
   command: /usr/bin/kubeadm token generate
@@ -56,6 +71,22 @@
   command: "/usr/bin/kubectl apply -f {{ KUBERNETES_NETWORKS[KUBERNETES_DEF_NETWORK]['url'] }}"
   tags:
     - network
+
+- name: copy kubelet config
+  copy:
+    src: kubelet.conf
+    dest: /etc/systemd/system/kubelet.service.d/10-kubeadm.conf
+  tags:
+    - kubelet
+
+- name: restart kubelet
+  systemd:
+    name: kubelet.service
+    enabled: true
+    state: restarted
+    daemon_reload: yes
+  tags:
+    - kubelet
 
 - name: update .kube/config file
   replace:
