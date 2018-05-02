@@ -72,22 +72,6 @@
   tags:
     - network
 
-- name: copy kubelet config
-  copy:
-    src: kubelet.conf
-    dest: /etc/systemd/system/kubelet.service.d/10-kubeadm.conf
-  tags:
-    - kubelet
-
-- name: restart kubelet
-  systemd:
-    name: kubelet.service
-    enabled: true
-    state: restarted
-    daemon_reload: yes
-  tags:
-    - kubelet
-
 - name: update .kube/config file
   replace:
     path: /root/.kube/config
